@@ -11,7 +11,7 @@ STUDENT_DATA = {
     "tx_metainfo": {
         "recipient": "0xA895D3c728a77bedEa2081E2090fcB1679D305D9",
         "value_eth": 0.001,
-        "fee_eth": 0.000031500000189,
+        "fee_eth": 0.000031,
         "block_number": 10430813,
     },
 }
