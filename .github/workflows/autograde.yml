@@ -1,0 +1,53 @@
+name: Autograding
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout student repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ---- visible tests (student can see these) ----
+      - name: Run visible tests
+        run: pytest tests/test_visible.py -v
+
+      # ---- hidden tests (fetched from private repo) ----
+      - name: Fetch hidden tests
+        env:
+          ASSIGNMENT_NUMBER: "0"  # Change this for each assignment (0, 1, 2, etc.)
+        run: |
+          HIDDEN_TESTS_URL="https://api.github.com/repos/${{ secrets.PRIVATE_TESTS_REPO }}/contents/assignment-${ASSIGNMENT_NUMBER}/test_hidden.py"
+          curl -f -sSL \
+            -H "Authorization: token ${{ secrets.PRIVATE_TESTS_PAT }}" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "${HIDDEN_TESTS_URL}" \
+            -o tests/test_hidden.py
+          # Fail with a clear message if the file is empty or not valid Python (e.g. API error body was written)
+          if [ ! -s tests/test_hidden.py ]; then
+            echo "::error::Fetched test_hidden.py is empty. Check PRIVATE_TESTS_REPO and PRIVATE_TESTS_PAT."
+            exit 1
+          fi
+          if ! grep -q "def test_\|class Test" tests/test_hidden.py; then
+            echo "::error::Fetched file does not look like a test module (no test_ or Test). Check repo path and secrets."
+            head -5 tests/test_hidden.py
+            exit 1
+          fi
+
+      - name: Run hidden tests
+        run: pytest tests/test_hidden.py -v
